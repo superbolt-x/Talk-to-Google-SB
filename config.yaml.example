@@ -20,8 +20,13 @@ google:
   token_path: "~/.adloop/token.json"
 
 ga4:
-  # Your GA4 property ID (numeric).
+  # Default GA4 property ID (numeric, e.g. "123456789").
   # Find it in GA4 → Admin → Property Settings.
+  #
+  # For agency accounts managing multiple clients: leave this blank (or set it
+  # to your most-used property). All GA4 tools accept a property_id parameter
+  # so you can target any property at call time. Call get_account_summaries()
+  # to list every property the authenticated user can access.
   property_id: ""
 
 ads:

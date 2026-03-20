@@ -181,6 +181,146 @@ def get_search_terms(
     return {"search_terms": rows, "total_search_terms": len(rows)}
 
 
+def get_ad_group_performance(
+    config: AdLoopConfig,
+    *,
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get ad group-level performance metrics for the given date range."""
+    from adloop.ads.gaql import execute_query
+
+    date_clause = _date_clause(date_range_start, date_range_end)
+
+    query = f"""
+        SELECT campaign.id, campaign.name,
+               ad_group.id, ad_group.name, ad_group.status, ad_group.type,
+               metrics.impressions, metrics.clicks, metrics.cost_micros,
+               metrics.conversions, metrics.conversions_value,
+               metrics.ctr, metrics.average_cpc
+        FROM ad_group
+        WHERE ad_group.status != 'REMOVED'
+          {date_clause}
+        ORDER BY metrics.cost_micros DESC
+    """
+
+    rows = execute_query(config, customer_id, query)
+    _enrich_cost_fields(rows)
+
+    return {"ad_groups": rows, "total_ad_groups": len(rows)}
+
+
+def get_asset_group_performance(
+    config: AdLoopConfig,
+    *,
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get asset group-level performance for Performance Max campaigns."""
+    from adloop.ads.gaql import execute_query
+
+    date_clause = _date_clause(date_range_start, date_range_end)
+
+    query = f"""
+        SELECT campaign.id, campaign.name,
+               asset_group.id, asset_group.name, asset_group.status,
+               asset_group.ad_strength,
+               asset_group.final_urls,
+               metrics.impressions, metrics.clicks, metrics.cost_micros,
+               metrics.conversions, metrics.conversions_value, metrics.ctr
+        FROM asset_group
+        WHERE asset_group.status != 'REMOVED'
+          {date_clause}
+        ORDER BY metrics.cost_micros DESC
+    """
+
+    rows = execute_query(config, customer_id, query)
+    _enrich_cost_fields(rows)
+
+    return {"asset_groups": rows, "total_asset_groups": len(rows)}
+
+
+def get_asset_group_asset_performance(
+    config: AdLoopConfig,
+    *,
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get per-asset performance for ads via ad_group_ad_asset_view.
+
+    Returns actual metrics (impressions, clicks, cost) broken down by individual
+    asset, along with the performance label (BEST | GOOD | LOW | PENDING).
+    Works for Responsive Search Ads and other ad types that use assets.
+    """
+    from adloop.ads.gaql import execute_query
+
+    date_clause = _date_clause(date_range_start, date_range_end)
+
+    query = f"""
+        SELECT campaign.id, campaign.name,
+               ad_group.id, ad_group.name,
+               ad_group_ad.ad.id,
+               asset.id, asset.name, asset.type,
+               asset.text_asset.text,
+               asset.image_asset.full_size.url,
+               asset.youtube_video_asset.youtube_video_id,
+               ad_group_ad_asset_view.field_type,
+               ad_group_ad_asset_view.performance_label,
+               ad_group_ad_asset_view.enabled,
+               ad_group_ad_asset_view.pinned_field,
+               metrics.impressions, metrics.clicks, metrics.cost_micros,
+               metrics.conversions, metrics.ctr
+        FROM ad_group_ad_asset_view
+        WHERE ad_group_ad_asset_view.enabled = TRUE
+          {date_clause}
+        ORDER BY metrics.impressions DESC
+    """
+
+    rows = execute_query(config, customer_id, query)
+    _enrich_cost_fields(rows)
+
+    return {"assets": rows, "total_assets": len(rows)}
+
+
+def get_product_performance(
+    config: AdLoopConfig,
+    *,
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get product-level performance via shopping_performance_view."""
+    from adloop.ads.gaql import execute_query
+
+    date_clause = _date_clause(date_range_start, date_range_end)
+
+    query = f"""
+        SELECT campaign.id, campaign.name,
+               ad_group.id, ad_group.name,
+               segments.product_item_id,
+               segments.product_title,
+               segments.product_brand,
+               segments.product_type_l1,
+               segments.product_category_level1,
+               segments.product_condition,
+               metrics.impressions, metrics.clicks, metrics.cost_micros,
+               metrics.conversions, metrics.conversions_value, metrics.ctr
+        FROM shopping_performance_view
+        WHERE 1=1
+          {date_clause}
+        ORDER BY metrics.cost_micros DESC
+        LIMIT 500
+    """
+
+    rows = execute_query(config, customer_id, query)
+    _enrich_cost_fields(rows)
+
+    return {"products": rows, "total_products": len(rows)}
+
+
 def get_negative_keywords(
     config: AdLoopConfig,
     *,

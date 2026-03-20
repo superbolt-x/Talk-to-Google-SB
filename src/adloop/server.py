@@ -320,6 +320,104 @@ def get_search_terms(
 
 @mcp.tool(annotations=_READONLY)
 @_safe
+def get_ad_group_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get ad group-level performance metrics for a date range.
+
+    Returns: campaign name, ad group name, status, type, impressions, clicks,
+    cost, conversions, CPA, CTR for each ad group.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_ad_group_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_asset_group_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get asset group-level performance for Performance Max (PMax) campaigns.
+
+    Returns: campaign name, asset group name, status, ad strength, final URLs,
+    impressions, clicks, cost, conversions for each asset group.
+    Ad strength values: EXCELLENT, GOOD, POOR, PENDING, UNKNOWN.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_asset_group_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_asset_group_asset_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get per-asset performance metrics via ad_group_ad_asset_view.
+
+    Returns actual impressions, clicks, cost, and conversions broken down
+    by individual asset, along with performance labels (BEST | GOOD | LOW | PENDING)
+    and whether the asset is pinned to a specific position.
+
+    Works for Responsive Search Ads — use this to identify which headlines
+    and descriptions drive performance and which should be replaced.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_asset_group_asset_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_product_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get product-level performance from Shopping campaigns.
+
+    Returns: product ID, title, brand, type, category, condition,
+    impressions, clicks, cost, conversions, and ROAS per product.
+    Use this to identify top/underperforming products in Shopping or PMax.
+    Date format: "YYYY-MM-DD". Empty = last 30 days. Max 500 products.
+    """
+    from adloop.ads.read import get_product_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
 def get_negative_keywords(
     customer_id: str = "",
     campaign_id: str = "",

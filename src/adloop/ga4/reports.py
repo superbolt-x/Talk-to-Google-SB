@@ -9,30 +9,50 @@ if TYPE_CHECKING:
 
 
 def get_account_summaries(config: AdLoopConfig) -> dict:
-    """List GA4 accounts and properties accessible by the authenticated user."""
+    """List all GA4 accounts and properties the authenticated user can access.
+
+    Returns both a flat ``properties`` list (best for quickly picking a
+    property_id) and a nested ``accounts`` structure.  The ``property_id``
+    field in each entry is the bare numeric ID ready to pass directly to any
+    other GA4 tool.
+    """
     from adloop.ga4.client import get_admin_client
 
     client = get_admin_client(config)
     summaries = client.list_account_summaries()
 
     accounts = []
+    flat_properties = []
+
     for summary in summaries:
+        account_id = summary.account.replace("accounts/", "")
         properties = []
         for prop in summary.property_summaries:
-            properties.append({
-                "property": prop.property,
-                "display_name": prop.display_name,
-            })
+            # Resource name is "properties/123456789" — strip the prefix so
+            # the value can be passed directly as property_id to other tools.
+            numeric_id = prop.property.replace("properties/", "")
+            entry = {
+                "property_id": numeric_id,
+                "property_name": prop.display_name,
+                "account_id": account_id,
+                "account_name": summary.display_name,
+            }
+            properties.append(entry)
+            flat_properties.append(entry)
+
         accounts.append({
-            "account": summary.account,
-            "display_name": summary.display_name,
+            "account_id": account_id,
+            "account_name": summary.display_name,
             "properties": properties,
         })
 
     return {
+        # Flat list — easiest for the LLM to scan and pick a property_id.
+        "properties": flat_properties,
+        # Nested by account — useful when the user wants to see client grouping.
         "accounts": accounts,
         "total_accounts": len(accounts),
-        "total_properties": sum(len(a["properties"]) for a in accounts),
+        "total_properties": len(flat_properties),
     }
 
 

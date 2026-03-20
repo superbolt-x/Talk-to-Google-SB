@@ -125,10 +125,16 @@ def health_check() -> dict:
 @mcp.tool(annotations=_READONLY)
 @_safe
 def get_account_summaries() -> dict:
-    """List all GA4 accounts and properties accessible by the authenticated user.
+    """Discover all GA4 properties accessible by the authenticated user.
 
-    Use this as the first step to discover which GA4 properties are available.
-    Returns account names, property names, and property IDs.
+    ALWAYS call this first when a specific GA4 property has not been mentioned.
+    Returns a flat ``properties`` list — each entry contains ``property_id``,
+    ``property_name``, ``account_id``, and ``account_name``.  Pass the
+    ``property_id`` value directly to run_ga4_report, run_realtime_report,
+    get_tracking_events, and the cross-reference tools.
+
+    For agency accounts with many clients this will return all properties
+    the authenticated Google account can access (can be 80+).
     """
     from adloop.ga4.reports import get_account_summaries as _impl
 
@@ -147,11 +153,17 @@ def run_ga4_report(
 ) -> dict:
     """Run a custom GA4 report with specified dimensions, metrics, and date range.
 
-    Common dimensions: date, pagePath, sessionSource, sessionMedium, country, deviceCategory, eventName
-    Common metrics: sessions, totalUsers, newUsers, screenPageViews, conversions, eventCount, bounceRate
+    property_id: numeric GA4 property ID (e.g. "123456789"). Call
+    get_account_summaries() first to find the right ID for the client.
+    Falls back to the default property_id in config if empty.
 
-    Date formats: "today", "yesterday", "7daysAgo", "28daysAgo", "90daysAgo", or "YYYY-MM-DD".
-    If property_id is empty, uses the default from config.
+    Common dimensions: date, pagePath, sessionSource, sessionMedium,
+    country, deviceCategory, eventName
+    Common metrics: sessions, totalUsers, newUsers, screenPageViews,
+    conversions, eventCount, bounceRate
+
+    Date formats: "today", "yesterday", "7daysAgo", "28daysAgo",
+    "90daysAgo", or "YYYY-MM-DD".
     """
     from adloop.ga4.reports import run_ga4_report as _impl
 
@@ -175,7 +187,10 @@ def run_realtime_report(
 ) -> dict:
     """Run a GA4 realtime report showing current active users and events.
 
-    Useful for checking if tracking is firing correctly after code changes.
+    property_id: numeric GA4 property ID. Call get_account_summaries()
+    first to find the right ID for the client. Falls back to config default.
+
+    Useful for verifying tracking is firing after code changes.
     Common dimensions: unifiedScreenName, eventName, country, deviceCategory
     Common metrics: activeUsers, eventCount
     """
@@ -198,8 +213,11 @@ def get_tracking_events(
 ) -> dict:
     """List all GA4 events and their volume for the given date range.
 
-    Returns every distinct event name with its total event count.
-    Use this to understand what tracking is configured and active.
+    property_id: numeric GA4 property ID. Call get_account_summaries()
+    first to find the right ID for the client. Falls back to config default.
+
+    Returns every distinct event name with its total event count, sorted
+    by volume descending. Use this to audit what tracking is active.
     """
     from adloop.ga4.tracking import get_tracking_events as _impl
 
@@ -450,8 +468,10 @@ def analyze_campaign_conversions(
     Combines Google Ads campaign metrics with GA4 session/conversion data to
     reveal click-to-session ratios (GDPR indicator), compare Ads-reported vs
     GA4-reported conversions, and compute cost-per-GA4-conversion.
-
     Also returns non-paid channel conversion rates for comparison context.
+
+    property_id: numeric GA4 property ID for the client. Call
+    get_account_summaries() first if unsure. Falls back to config default.
     Date format: "YYYY-MM-DD". Empty = last 30 days.
     """
     from adloop.crossref import analyze_campaign_conversions as _impl
@@ -479,6 +499,9 @@ def landing_page_analysis(
     Combines ad final URLs with GA4 page-level data to show paid traffic
     sessions, conversion rates, bounce rates, and engagement per landing page.
     Identifies pages that get ad clicks but zero conversions and orphaned URLs.
+
+    property_id: numeric GA4 property ID for the client. Call
+    get_account_summaries() first if unsure. Falls back to config default.
     Date format: "YYYY-MM-DD". Empty = last 30 days.
     """
     from adloop.crossref import landing_page_analysis as _impl
@@ -507,6 +530,8 @@ def attribution_check(
     diagnoses GDPR consent gaps, attribution model differences, and missing
     conversion event configuration.
 
+    property_id: numeric GA4 property ID for the client. Call
+    get_account_summaries() first if unsure. Falls back to config default.
     conversion_events: optional list of GA4 event names to specifically check
     (e.g. ["sign_up", "purchase"]). If omitted, compares aggregate totals only.
     Date format: "YYYY-MM-DD". Empty = last 30 days.

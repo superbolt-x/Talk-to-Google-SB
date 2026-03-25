@@ -75,7 +75,7 @@ def analyze_campaign_conversions(
     ga4_result = run_ga4_report(
         config,
         property_id=property_id,
-        dimensions=["sessionCampaignName", "sessionSource", "sessionMedium"],
+        dimensions=["sessionCampaignId", "sessionSource", "sessionMedium"],
         metrics=["sessions", "conversions", "engagedSessions", "totalUsers"],
         date_range_start=start,
         date_range_end=end,
@@ -84,12 +84,12 @@ def analyze_campaign_conversions(
     if "error" in ga4_result:
         return ga4_result
 
-    # Index GA4 rows by (campaign, source, medium)
+    # Index GA4 rows by (campaign_id, source, medium)
     paid_by_campaign: dict[str, dict] = {}
     non_paid: dict[tuple[str, str], dict] = {}
 
     for row in ga4_result.get("rows", []):
-        campaign = row.get("sessionCampaignName", "(not set)")
+        campaign_id = row.get("sessionCampaignId", "(not set)")
         source = row.get("sessionSource", "")
         medium = row.get("sessionMedium", "")
         sessions = _safe_int(row.get("sessions", 0))
@@ -99,7 +99,7 @@ def analyze_campaign_conversions(
         is_paid = source == "google" and medium == "cpc"
 
         if is_paid:
-            bucket = paid_by_campaign.setdefault(campaign, {
+            bucket = paid_by_campaign.setdefault(campaign_id, {
                 "sessions": 0, "conversions": 0, "engaged": 0,
             })
             bucket["sessions"] += sessions
@@ -123,7 +123,8 @@ def analyze_campaign_conversions(
         ads_cost = _safe_float(camp.get("metrics.cost", 0))
         ads_conversions = _safe_float(camp.get("metrics.conversions", 0))
 
-        ga4 = paid_by_campaign.get(name, {"sessions": 0, "conversions": 0, "engaged": 0})
+        cid = str(camp.get("campaign.id", ""))
+        ga4 = paid_by_campaign.get(cid, {"sessions": 0, "conversions": 0, "engaged": 0})
         ga4_sessions = ga4["sessions"]
         ga4_conversions = ga4["conversions"]
 

@@ -110,22 +110,12 @@ def _prompt_credentials_path(default: str = "~/.adloop/credentials.json") -> str
         return value
 
 
-def _prompt_property_id(default: str = "") -> str:
-    while True:
-        value = _prompt("GA4 Property ID (numeric)", default=default)
-        if value and not value.isdigit():
-            _print("    ⚠  Property ID should be numeric (e.g. 519379787)")
-            continue
-        return value
-
 
 def _generate_config_yaml(
     *,
     project_id: str,
     credentials_path: str,
-    property_id: str,
     developer_token: str,
-    customer_id: str,
     login_customer_id: str,
     max_daily_budget: float,
     require_dry_run: bool,
@@ -142,13 +132,14 @@ def _generate_config_yaml(
           token_path: "~/.adloop/token.json"
 
         ga4:
-          property_id: "{property_id}"
+          # No default property — resolved per-request across all accessible properties
+          property_id: ""
 
         ads:
           developer_token: "{developer_token}"
-          customer_id: "{customer_id}"
-          # MCC / Manager Account ID (required if using a manager account)
+          # MCC / Manager Account — client accounts are enumerated at runtime
           login_customer_id: "{login_customer_id}"
+          customer_id: ""
 
         safety:
           # Maximum daily budget AdLoop can set (safety cap)
@@ -226,35 +217,24 @@ def run_init_wizard() -> None:
         default=_existing("google", "project_id"),
     )
 
-    # Step 4: GA4 Property ID
-    _step_header(4, "Google Analytics (GA4)")
-    _print("  Find your GA4 Property ID at:")
-    _print("  → https://analytics.google.com → Admin → Property Settings")
-    _print()
-    property_id = _prompt_property_id(
-        default=_existing("ga4", "property_id"),
-    )
-
-    # Step 5: Developer Token
-    _step_header(5, "Google Ads Developer Token")
+    # Step 4: Developer Token
+    _step_header(4, "Google Ads Developer Token")
     developer_token = _prompt(
         "Developer Token",
         default=_existing("ads", "developer_token"),
     )
 
-    # Step 6: Customer ID
-    _step_header(6, "Google Ads Account IDs")
-    customer_id = _prompt_customer_id(
-        "Ads Customer ID (XXX-XXX-XXXX)",
-        default=_existing("ads", "customer_id"),
-    )
+    # Step 5: MCC Manager Account ID
+    _step_header(5, "Google Ads Manager Account (MCC)")
+    _print("  Client accounts are enumerated at runtime — only the MCC ID is needed.")
+    _print()
     login_customer_id = _prompt_customer_id(
         "MCC / Manager Account ID (XXX-XXX-XXXX)",
         default=_existing("ads", "login_customer_id"),
     )
 
-    # Step 7: Safety defaults
-    _step_header(7, "Safety Defaults")
+    # Step 6: Safety defaults
+    _step_header(6, "Safety Defaults")
     budget_str = _prompt(
         "Max daily budget cap (safety limit)",
         default=str(_existing("safety", "max_daily_budget", "50")),
@@ -279,9 +259,7 @@ def run_init_wizard() -> None:
     config_yaml = _generate_config_yaml(
         project_id=project_id,
         credentials_path=credentials_path,
-        property_id=property_id,
         developer_token=developer_token,
-        customer_id=customer_id,
         login_customer_id=login_customer_id,
         max_daily_budget=max_daily_budget,
         require_dry_run=require_dry_run,

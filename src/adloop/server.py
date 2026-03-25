@@ -390,6 +390,33 @@ def get_asset_group_asset_performance(
     date_range_start: str = "",
     date_range_end: str = "",
 ) -> dict:
+    """Get per-asset performance for Performance Max (PMax) asset groups.
+
+    Queries the asset_group_asset resource — returns each individual asset
+    (text, image, video) within a PMax asset group with its performance label
+    (BEST | GOOD | LOW | PENDING) and primary status.
+
+    Use this to identify which PMax assets drive results and which to replace.
+    Complements get_asset_group_performance (aggregate) with per-asset detail.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_asset_group_asset_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_ad_group_ad_asset_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
     """Get per-asset performance metrics via ad_group_ad_asset_view.
 
     Returns actual impressions, clicks, cost, and conversions broken down
@@ -400,7 +427,7 @@ def get_asset_group_asset_performance(
     and descriptions drive performance and which should be replaced.
     Date format: "YYYY-MM-DD". Empty = last 30 days.
     """
-    from adloop.ads.read import get_asset_group_asset_performance as _impl
+    from adloop.ads.read import get_ad_group_ad_asset_performance as _impl
 
     return _impl(
         _config,

@@ -241,7 +241,50 @@ def get_asset_group_asset_performance(
     date_range_start: str = "",
     date_range_end: str = "",
 ) -> dict:
-    """Get per-asset performance for ads via ad_group_ad_asset_view.
+    """Get per-asset performance for Performance Max campaigns via asset_group_asset.
+
+    Returns metrics broken down by individual asset within a PMax asset group,
+    along with performance_label (BEST | GOOD | LOW | PENDING | UNSPECIFIED)
+    and primary_status for each asset.
+    """
+    from adloop.ads.gaql import execute_query
+
+    date_clause = _date_clause(date_range_start, date_range_end)
+
+    query = f"""
+        SELECT campaign.id, campaign.name,
+               asset_group.id, asset_group.name,
+               asset_group_asset.field_type,
+               asset_group_asset.performance_label,
+               asset_group_asset.primary_status,
+               asset_group_asset.status,
+               asset.id, asset.name, asset.type,
+               asset.text_asset.text,
+               asset.image_asset.full_size.url,
+               asset.youtube_video_asset.youtube_video_id,
+               metrics.impressions, metrics.clicks, metrics.cost_micros,
+               metrics.conversions, metrics.conversions_value, metrics.ctr
+        FROM asset_group_asset
+        WHERE asset_group_asset.status != 'REMOVED'
+          AND metrics.cost_micros > 0
+          {date_clause}
+        ORDER BY metrics.impressions DESC
+    """
+
+    rows = execute_query(config, customer_id, query)
+    _enrich_cost_fields(rows)
+
+    return {"assets": rows, "total_assets": len(rows)}
+
+
+def get_ad_group_ad_asset_performance(
+    config: AdLoopConfig,
+    *,
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+) -> dict:
+    """Get per-asset performance for RSA ads via ad_group_ad_asset_view.
 
     Returns actual metrics (impressions, clicks, cost) broken down by individual
     asset, along with the performance label (BEST | GOOD | LOW | PENDING).

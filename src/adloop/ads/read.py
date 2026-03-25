@@ -52,6 +52,7 @@ def get_campaign_performance(
                metrics.ctr, metrics.average_cpc
         FROM campaign
         WHERE campaign.status != 'REMOVED'
+          AND metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.cost_micros DESC
     """
@@ -85,6 +86,7 @@ def get_ad_performance(
                metrics.conversions, metrics.cost_micros
         FROM ad_group_ad
         WHERE ad_group_ad.status != 'REMOVED'
+          AND metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.cost_micros DESC
     """
@@ -117,6 +119,7 @@ def get_keyword_performance(
                metrics.conversions
         FROM keyword_view
         WHERE ad_group_criterion.status != 'REMOVED'
+          AND metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.cost_micros DESC
     """
@@ -137,21 +140,6 @@ def get_search_terms(
     """Get search terms report — what users actually typed before clicking ads."""
     from adloop.ads.gaql import execute_query
 
-    date_clause = _date_clause(date_range_start, date_range_end)
-
-    query = f"""
-        SELECT search_term_view.search_term,
-               campaign.name, ad_group.name,
-               metrics.impressions, metrics.clicks,
-               metrics.cost_micros, metrics.conversions
-        FROM search_term_view
-        WHERE segments.date DURING LAST_30_DAYS
-          {f"AND segments.date BETWEEN '{date_range_start}' AND '{date_range_end}'" if date_range_start and date_range_end else ""}
-        ORDER BY metrics.clicks DESC
-        LIMIT 200
-    """
-    # search_term_view requires an explicit date segment, so we always
-    # include DURING LAST_30_DAYS as baseline and override if dates given.
     if date_range_start and date_range_end:
         query = f"""
             SELECT search_term_view.search_term,
@@ -159,7 +147,8 @@ def get_search_terms(
                    metrics.impressions, metrics.clicks,
                    metrics.cost_micros, metrics.conversions
             FROM search_term_view
-            WHERE segments.date BETWEEN '{date_range_start}' AND '{date_range_end}'
+            WHERE metrics.cost_micros > 0
+              AND segments.date BETWEEN '{date_range_start}' AND '{date_range_end}'
             ORDER BY metrics.clicks DESC
             LIMIT 200
         """
@@ -170,7 +159,8 @@ def get_search_terms(
                    metrics.impressions, metrics.clicks,
                    metrics.cost_micros, metrics.conversions
             FROM search_term_view
-            WHERE segments.date DURING LAST_30_DAYS
+            WHERE metrics.cost_micros > 0
+              AND segments.date DURING LAST_30_DAYS
             ORDER BY metrics.clicks DESC
             LIMIT 200
         """
@@ -201,6 +191,7 @@ def get_ad_group_performance(
                metrics.ctr, metrics.average_cpc
         FROM ad_group
         WHERE ad_group.status != 'REMOVED'
+          AND metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.cost_micros DESC
     """
@@ -232,6 +223,7 @@ def get_asset_group_performance(
                metrics.conversions, metrics.conversions_value, metrics.ctr
         FROM asset_group
         WHERE asset_group.status != 'REMOVED'
+          AND metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.cost_micros DESC
     """
@@ -275,6 +267,7 @@ def get_asset_group_asset_performance(
                metrics.conversions, metrics.ctr
         FROM ad_group_ad_asset_view
         WHERE ad_group_ad_asset_view.enabled = TRUE
+          AND metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.impressions DESC
     """
@@ -309,7 +302,7 @@ def get_product_performance(
                metrics.impressions, metrics.clicks, metrics.cost_micros,
                metrics.conversions, metrics.conversions_value, metrics.ctr
         FROM shopping_performance_view
-        WHERE 1=1
+        WHERE metrics.cost_micros > 0
           {date_clause}
         ORDER BY metrics.cost_micros DESC
         LIMIT 500

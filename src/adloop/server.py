@@ -1,6 +1,12 @@
 """AdLoop MCP server — FastMCP instance with all tool registrations."""
-
 from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Add the parent of `adloop` to sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 
 import functools
 from typing import Callable
@@ -249,10 +255,49 @@ def list_accounts() -> dict:
 
 @mcp.tool(annotations=_READONLY)
 @_safe
+def list_campaigns(customer_id:str, campaign_status_filter: str = 'ENABLED', with_spend: bool = True) -> dict:
+    """List all accessible Google Ads campaigns for a specific customer id.
+
+    Returns account name, ID, and status status and campaign names, IDs and status. Use this to discover
+    which campaigns are available before running performance queries.
+
+    Possibility to filter on campaign status or not (campaign_status_filter = '')
+    """
+    from adloop.ads.read import list_campaigns as _impl
+
+    return _impl(_config, customer_id, campaign_status_filter, with_spend)
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def list_ad_groups(
+        customer_id:str, 
+        campaign_status_filter: str = 'ENABLED', 
+        with_spend: bool = True, 
+        campaign_ids:list = [""],
+        ad_group_status_filter: str = 'ENABLED'
+        ) -> dict:
+
+    """List all accessible Google Ads ad groups for a specific customer id and for specific campaigns.
+
+    Returns account name, ID, and status status and campaign names, IDs and status. Use this to discover
+    which campaigns are available before running performance queries.
+
+    Possibility to filter on campaign status or not (campaign_status_filter = ''), on ad groups with spend.
+    """
+    from adloop.ads.read import list_ad_groups as _impl
+
+    return _impl(_config, customer_id, campaign_status_filter, with_spend,campaign_ids, ad_group_status_filter)
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
 def get_campaign_performance(
     customer_id: str = "",
     date_range_start: str = "",
     date_range_end: str = "",
+    campaign_ids:list = [""],
+    campaign_status_filter:str = 'ENABLED',
+    with_spend:bool = True
 ) -> dict:
     """Get campaign-level performance metrics for a date range.
 
@@ -260,6 +305,7 @@ def get_campaign_performance(
     conversions, CPA, ROAS, CTR for each campaign.
     Date format: "YYYY-MM-DD". Empty = last 30 days.
     """
+
     from adloop.ads.read import get_campaign_performance as _impl
 
     return _impl(
@@ -267,7 +313,152 @@ def get_campaign_performance(
         customer_id=customer_id or _config.ads.customer_id,
         date_range_start=date_range_start,
         date_range_end=date_range_end,
+        campaign_ids=campaign_ids,
+        campaign_status_filter=campaign_status_filter,
+        with_spend=with_spend
     )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_ad_group_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+    campaign_ids:list = [""],
+    campaign_status_filter:str = 'ENABLED',
+    ad_group_ids:list = [""],
+    ad_group_status_filter:str = 'ENABLED',
+    with_spend:bool = True
+) -> dict:
+    """Get ad group-level performance metrics for a date range.
+
+    Returns: campaign name, ad group name, status, type, impressions, clicks,
+    cost, conversions, CPA, CTR for each ad group.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_ad_group_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+        campaign_ids=campaign_ids,
+        campaign_status_filter = campaign_status_filter,
+        ad_group_ids=ad_group_ids,
+        ad_group_status_filter=ad_group_status_filter,
+        with_spend=with_spend
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_asset_group_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+    campaign_ids:list = [""],
+    campaign_status_filter:str = 'ENABLED',
+    asset_group_ids:list = [""],
+    asset_group_status_filter:str = 'ENABLED',
+    with_spend:bool = True
+) -> dict:
+    """Get asset group-level performance for Performance Max (PMax) campaigns.
+
+    Returns: campaign name, asset group name, status, ad strength, final URLs,
+    impressions, clicks, cost, conversions for each asset group.
+    Ad strength values: EXCELLENT, GOOD, POOR, PENDING, UNKNOWN.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_asset_group_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+        campaign_ids=campaign_ids,
+        campaign_status_filter = campaign_status_filter,
+        asset_group_ids=asset_group_ids,
+        asset_group_status_filter=asset_group_status_filter,
+        with_spend=with_spend
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_asset_group_asset_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+    campaign_ids:list = [""],
+    campaign_status_filter:str = 'ENABLED',
+    asset_group_asset_ids:list = [""],
+    asset_group_asset_status_filter:str = 'ENABLED',
+    with_spend:bool = True
+) -> dict:
+    """Get per-asset performance for Performance Max (PMax) asset groups.
+
+    Queries the asset_group_asset resource — returns each individual asset
+    (text, image, video) within a PMax asset group with its performance label
+    (BEST | GOOD | LOW | PENDING) and primary status.
+
+    Use this to identify which PMax assets drive results and which to replace.
+    Complements get_asset_group_performance (aggregate) with per-asset detail.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_asset_group_asset_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+        campaign_ids=campaign_ids,
+        campaign_status_filter = campaign_status_filter,
+        asset_group_asset_ids=asset_group_asset_ids,
+        asset_group_asset_status_filter=asset_group_asset_status_filter,
+        with_spend=with_spend
+    )
+
+
+@mcp.tool(annotations=_READONLY)
+@_safe
+def get_ad_group_ad_asset_performance(
+    customer_id: str = "",
+    date_range_start: str = "",
+    date_range_end: str = "",
+    campaign_ids:list = [""],
+    campaign_status_filter:str = 'ENABLED',
+    asset_group_ad_asset_ids:list = [""],
+    asset_group_ad_asset_status_filter:str = 'ENABLED',
+    with_spend:bool = True
+) -> dict:
+    """Get per-asset performance metrics via ad_group_ad_asset_view.
+
+    Returns actual impressions, clicks, cost, and conversions broken down
+    by individual asset, along with performance labels (BEST | GOOD | LOW | PENDING)
+    and whether the asset is pinned to a specific position.
+
+    Works for Responsive Search Ads — use this to identify which headlines
+    and descriptions drive performance and which should be replaced.
+    Date format: "YYYY-MM-DD". Empty = last 30 days.
+    """
+    from adloop.ads.read import get_ad_group_ad_asset_performance as _impl
+
+    return _impl(
+        _config,
+        customer_id=customer_id or _config.ads.customer_id,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+        campaign_ids=campaign_ids,
+        campaign_status_filter = campaign_status_filter,
+        asset_group_ad_asset_ids=asset_group_ad_asset_ids,
+        asset_group_ad_asset_status_filter=asset_group_ad_asset_status_filter,
+        with_spend=with_spend
+    )
+
 
 
 @mcp.tool(annotations=_READONLY)
@@ -276,6 +467,13 @@ def get_ad_performance(
     customer_id: str = "",
     date_range_start: str = "",
     date_range_end: str = "",
+    campaign_ids:list = [""],
+    campaign_status_filter:str = 'ENABLED',
+    ad_group_ids:list = [""],
+    ad_group_status_filter:str = 'ENABLED',
+    ad_group_ad_ids:list = [""],
+    ad_group_ad_status_filter:str = 'ENABLED',
+    with_spend:bool = True
 ) -> dict:
     """Get ad-level performance data including headlines, descriptions, and metrics.
 
@@ -289,6 +487,13 @@ def get_ad_performance(
         customer_id=customer_id or _config.ads.customer_id,
         date_range_start=date_range_start,
         date_range_end=date_range_end,
+        campaign_ids=campaign_ids,
+        campaign_status_filter = campaign_status_filter,
+        ad_group_ids=ad_group_ids,
+        ad_group_status_filter=ad_group_status_filter,
+        ad_group_ad_ids=ad_group_ad_ids,
+        ad_group_ad_status_filter=ad_group_ad_status_filter,
+        with_spend=with_spend
     )
 
 
@@ -327,107 +532,6 @@ def get_search_terms(
     Returns: search term, campaign, ad group, impressions, clicks, conversions.
     """
     from adloop.ads.read import get_search_terms as _impl
-
-    return _impl(
-        _config,
-        customer_id=customer_id or _config.ads.customer_id,
-        date_range_start=date_range_start,
-        date_range_end=date_range_end,
-    )
-
-
-@mcp.tool(annotations=_READONLY)
-@_safe
-def get_ad_group_performance(
-    customer_id: str = "",
-    date_range_start: str = "",
-    date_range_end: str = "",
-) -> dict:
-    """Get ad group-level performance metrics for a date range.
-
-    Returns: campaign name, ad group name, status, type, impressions, clicks,
-    cost, conversions, CPA, CTR for each ad group.
-    Date format: "YYYY-MM-DD". Empty = last 30 days.
-    """
-    from adloop.ads.read import get_ad_group_performance as _impl
-
-    return _impl(
-        _config,
-        customer_id=customer_id or _config.ads.customer_id,
-        date_range_start=date_range_start,
-        date_range_end=date_range_end,
-    )
-
-
-@mcp.tool(annotations=_READONLY)
-@_safe
-def get_asset_group_performance(
-    customer_id: str = "",
-    date_range_start: str = "",
-    date_range_end: str = "",
-) -> dict:
-    """Get asset group-level performance for Performance Max (PMax) campaigns.
-
-    Returns: campaign name, asset group name, status, ad strength, final URLs,
-    impressions, clicks, cost, conversions for each asset group.
-    Ad strength values: EXCELLENT, GOOD, POOR, PENDING, UNKNOWN.
-    Date format: "YYYY-MM-DD". Empty = last 30 days.
-    """
-    from adloop.ads.read import get_asset_group_performance as _impl
-
-    return _impl(
-        _config,
-        customer_id=customer_id or _config.ads.customer_id,
-        date_range_start=date_range_start,
-        date_range_end=date_range_end,
-    )
-
-
-@mcp.tool(annotations=_READONLY)
-@_safe
-def get_asset_group_asset_performance(
-    customer_id: str = "",
-    date_range_start: str = "",
-    date_range_end: str = "",
-) -> dict:
-    """Get per-asset performance for Performance Max (PMax) asset groups.
-
-    Queries the asset_group_asset resource — returns each individual asset
-    (text, image, video) within a PMax asset group with its performance label
-    (BEST | GOOD | LOW | PENDING) and primary status.
-
-    Use this to identify which PMax assets drive results and which to replace.
-    Complements get_asset_group_performance (aggregate) with per-asset detail.
-    Date format: "YYYY-MM-DD". Empty = last 30 days.
-    """
-    from adloop.ads.read import get_asset_group_asset_performance as _impl
-
-    return _impl(
-        _config,
-        customer_id=customer_id or _config.ads.customer_id,
-        date_range_start=date_range_start,
-        date_range_end=date_range_end,
-    )
-
-
-@mcp.tool(annotations=_READONLY)
-@_safe
-def get_ad_group_ad_asset_performance(
-    customer_id: str = "",
-    date_range_start: str = "",
-    date_range_end: str = "",
-) -> dict:
-    """Get per-asset performance metrics via ad_group_ad_asset_view.
-
-    Returns actual impressions, clicks, cost, and conversions broken down
-    by individual asset, along with performance labels (BEST | GOOD | LOW | PENDING)
-    and whether the asset is pinned to a specific position.
-
-    Works for Responsive Search Ads — use this to identify which headlines
-    and descriptions drive performance and which should be replaced.
-    Date format: "YYYY-MM-DD". Empty = last 30 days.
-    """
-    from adloop.ads.read import get_ad_group_ad_asset_performance as _impl
 
     return _impl(
         _config,
@@ -926,3 +1030,20 @@ def estimate_budget(
         forecast_days=forecast_days,
         customer_id=customer_id or _config.ads.customer_id,
     )
+
+
+# print(get_campaign_performance(
+#     customer_id = "4560674777",
+#     date_range_start= "2026-03-01",
+#     date_range_end= "2026-03-04"
+# ))
+
+# print(list_ad_groups("4560674777"
+# ))
+
+# print(get_ad_group_performance(
+#     customer_id = "4560674777",
+#     date_range_start= "2026-03-01",
+#     date_range_end= "2026-03-04",
+#     ad_group_ids = ["192257351238"]
+#     ))

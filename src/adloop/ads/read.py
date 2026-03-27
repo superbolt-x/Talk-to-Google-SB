@@ -108,7 +108,7 @@ def get_campaign_performance(
         ORDER BY metrics.cost_micros DESC
     """
 
-    if customer_id == "4560674777": # Erie construction
+    if customer_id == "4560674777" or "2819798401": # Erie construction
         query_conversion_action = f"""
         SELECT 
         campaign.id, campaign.name,
